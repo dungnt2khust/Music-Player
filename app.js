@@ -13,8 +13,21 @@
 
 const $$ = document.querySelectorAll.bind(document);
 const $ = document.querySelector.bind(document);
+const heading = $('header h2');
+const cdThumb = $('.cd-thumb');
+const audio = $('#audio');
+const cd = $('.cd');
+const playBtn = $('.btn-toggle-play');
+const player = $('.player');
+const progress = $('#progress');
+const nextBtn = $('.btn-next');
+const prevBtn = $('.btn-prev');
+const randomBtn = $('.btn-random');
 
 const app = {
+  currentIndex: 0,
+  isPlaying: false,
+  isRandom: false,
   songs: [
     {
       name: 'Nevada',
@@ -103,19 +116,133 @@ const app = {
     });
     $('.playlist').innerHTML = htmls.join('');
   },
+  defineProperties: function() {
+    Object.defineProperty(this, 'currentSong', {
+      get: function() {
+        return this.songs[this.currentIndex];
+      }
+    });
+  },
+  loadCurrentSong: function() {
+    heading.textContent = this.currentSong.name;
+    cdThumb.style.backgroundImage = `url('${this.currentSong.image}')`;
+    audio.src = this.currentSong.path;
+  },
   handleEvents: function() {
-    const cd = $('.cd');
     const cdWidth = cd.offsetWidth;
+    // Xử lý quay CD
+    const cdThumbAnimate = cdThumb.animate([
+      { transform: 'rotate(360deg)'}
+    ], {
+      duration: 20000, // 20 seconds
+      iterations: Infinity
+    });
+    cdThumbAnimate.pause();
+    // Xử lý phóng to / thu nhỏ CD 
     document.onscroll = function() {
       const scrollTop =  window.scrollY;
       const newCdWidth = cdWidth - scrollTop;
       cd.style.width = newCdWidth > 0 ? newCdWidth + 'px' : 0;
       cd.style.opacity = newCdWidth / cdWidth;
     }
+
+    // Xử lý click nút play
+    playBtn.onclick = function() {
+      if (app.isPlaying) {
+        audio.pause();
+      } else {
+        audio.play();
+      }
+    }
+
+    // Khi song được play trong
+    audio.onplay = function() {
+      app.isPlaying = true;
+      player.classList.add('playing');
+      cdThumbAnimate.play();
+    }
+
+    // Khi song bị pause
+    audio.onpause = function() {
+      app.isPlaying = false;
+      player.classList.remove('playing');
+      cdThumbAnimate.pause();
+    }
+
+    // Khi tiến độ bài hát thay đổi
+    audio.ontimeupdate = function() {
+        if (audio.duration) {
+          const progressPercent = Math.floor(audio.currentTime / audio.duration * 100);
+          progress.value = progressPercent;
+        }
+    }
+
+    // Xử lý khi tua song
+    progress.onchange = function(e) {
+      const seekTime = e.target.value * audio.duration / 100;
+      audio.currentTime = seekTime;
+    }
+
+    // Khi next song
+    nextBtn.onclick = function() {
+      if(app.isRandom) {
+        app.randomSong();
+      } else {
+        app.nextSong();
+      }
+      audio.play();
+    }
+
+    // Khi prev song
+    prevBtn.onclick = function() {
+      app.prevSong();
+      audio.play();
+    }
+
+    // Khi random song
+    randomBtn.onclick = function() {
+      app.isRandom = ! app.isRandom;
+      randomBtn.classList.toggle('active', app.isRandom);
+    }
+
+    // Xử lý next song khi audio ended
+    audio.onended = function() {
+      nextBtn.click();
+    }
+  }, 
+  nextSong: function() {
+    this.currentIndex++;
+    if (this.currentIndex > this.songs.length - 1)
+      this.currentIndex = 0;
+    this.loadCurrentSong();
+  },
+  prevSong: function() {
+    this.currentIndex--;
+    if (this.currentIndex < 0)
+      this.currentIndex = this.songs.length - 1;
+    this.loadCurrentSong();
+  },
+  randomSong: function() {
+    let newIndex;
+    do {
+      newIndex = Math.floor(Math.random() * this.songs.length);
+    } while(newIndex == this.currentIndex);
+    this.currentIndex = newIndex;
+    this.loadCurrentSong();
   },
   start: function() {
+    // Định nghĩa các thuộc tính cho Object
+    this.defineProperties();
+
+    // Xử lý sự kiện trong DOM
     this.handleEvents();
+
+    // Tải thông tin bài hát đầu tiên vào UI khi chạy ứng dụng
+    this.loadCurrentSong();
+
+    // Render playlist 
     this.render();
+
   }
 };
 
