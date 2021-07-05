@@ -33,6 +33,7 @@ const app = {
   isPlaying: false,
   isRandom: false,
   isRepeat: false,
+  songsListened: [],
   config: JSON.parse(localStorage.getItem(PLAYER_STORAGE_KEY)) || {},
   songs: [
     {
@@ -265,10 +266,19 @@ const app = {
   },
   randomSong: function() {
     let newIndex;
+    if (this.songsListened.length == 0) {
+      this.songsListened.push(this.currentIndex);
+    }
+    if (this.songsListened.length == this.songs.length) {
+      this.songsListened = [];
+    }
+    // this.songsListened.push(this.currentIndex);
     do {
       newIndex = Math.floor(Math.random() * this.songs.length);
-    } while(newIndex == this.currentIndex);
+    } while(this.songsListened.includes(newIndex));
     this.currentIndex = newIndex;
+    this.songsListened.push(newIndex);
+    console.log(this.songsListened);
     this.loadCurrentSong();
   },
   scrollToActiveSong: function() {
@@ -282,7 +292,7 @@ const app = {
   },
   loadConfig: function() {
     this.isRandom = this.config.isRandom;
-    this.isRepeat = this.config.isRandom;
+    this.isRepeat = this.config.isRepeat;
   },
   start: function() {
     // Gán cấu hình từ config vào ứng dụng
